@@ -24,7 +24,7 @@ if uploaded_file is not None:
 
     # Load segmentation model
     try:
-        segmentation_model = torch.jit.load("seg_model.ts")  # Adjust path if needed
+        segmentation_model = torch.jit.load("seg_model.ts")
         segmentation_model.eval()
     except Exception as e:
         st.error(f"Error loading segmentation model: {e}")
@@ -32,7 +32,7 @@ if uploaded_file is not None:
 
     # Load classification model
     try:
-        classification_model = torch.jit.load("class_model.ts")  # Adjust path if needed
+        classification_model = torch.jit.load("class_model.ts")
         classification_model.eval()
     except Exception as e:
         st.error(f"Error loading classification model: {e}")
@@ -40,7 +40,7 @@ if uploaded_file is not None:
 
     # Load class labels
     try:
-        with open("labels.json", "r") as f:  # Adjust path if needed
+        with open("labels.json", "r") as f:
             class_labels = json.load(f)
     except Exception as e:
         st.error(f"Error loading labels.json: {e}")
@@ -48,7 +48,7 @@ if uploaded_file is not None:
 
     # Load database of embeddings
     try:
-        database = torch.load("database.pt")  # Adjust path if needed
+        database = torch.load("database.pt")
     except Exception as e:
         st.error(f"Error loading database.pt: {e}")
         st.stop()
@@ -83,12 +83,24 @@ if uploaded_file is not None:
     with torch.no_grad():
         embedding = classification_model(image_cls)
 
-    # Compute cosine similarity between embedding and database embeddings
-    similarities = F.cosine_similarity(embedding, database, dim=1)
+    # Ensure embedding is 2D
+    if embedding.dim() == 1:
+        embedding = embedding.unsqueeze(0)
+
+    # Ensure database is 2D
+    if database.dim() > 2:
+        database = database.squeeze(0)
+
+    # Compute cosine similarity
+    try:
+        similarities = F.cosine_similarity(embedding, database, dim=1)
+    except Exception as e:
+        st.error(f"Error computing cosine similarity: {e}")
+        st.stop()
+
+    # Get predicted class and confidence
     predicted_class_idx = torch.argmax(similarities).item()
     confidence = similarities[predicted_class_idx].item()
-
-    # Get the predicted class name
     predicted_class = class_labels[str(predicted_class_idx)]
 
     # Display classification results
