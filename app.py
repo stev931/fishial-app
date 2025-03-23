@@ -49,9 +49,38 @@ if uploaded_file is not None:
     # Load database of embeddings
     try:
         database = torch.load("database.pt")
+        # Debugging: Display the type and structure of database
+        st.write(f"Debug: Type of database after loading: {type(database)}")
+        if isinstance(database, tuple):
+            st.write(f"Debug: Database is a tuple with {len(database)} elements")
+            for i, item in enumerate(database):
+                st.write(f"Debug: Element {i}: type={type(item)}, shape={getattr(item, 'shape', 'N/A')}")
+            # Extract the first tensor found in the tuple
+            for item in database:
+                if isinstance(item, torch.Tensor):
+                    database = item
+                    st.write("Debug: Extracted tensor from tuple")
+                    break
+            else:
+                st.error("No tensor found in the database tuple.")
+                st.stop()
+        elif not isinstance(database, torch.Tensor):
+            st.error(f"Database is neither a tensor nor a tuple containing a tensor: {type(database)}")
+            st.stop()
+        # At this point, database should be a tensor
+        st.write(f"Debug: Database is now a tensor with shape {database.shape}")
     except Exception as e:
         st.error(f"Error loading database.pt: {e}")
         st.stop()
+
+    # Ensure database is 2D (expected shape: [num_samples, embedding_dim])
+    if database.dim() != 2:
+        if database.dim() == 1:
+            database = database.unsqueeze(0)  # Convert 1D to 2D
+            st.write("Debug: Adjusted database from 1D to 2D")
+        else:
+            st.error(f"Database tensor must be 2D, but has shape {database.shape}")
+            st.stop()
 
     # Preprocess image for segmentation (assuming input size 416x416)
     transform_seg = T.Compose([
@@ -82,20 +111,24 @@ if uploaded_file is not None:
     # Run classification model to get embedding
     with torch.no_grad():
         output = classification_model(image_cls)
-
-    # Handle model output (tuple or tensor)
     if isinstance(output, tuple):
-        embedding = output[0]  # Extract the first element (assuming it's the embedding)
+        embedding = output[0]  # Assume embedding is the first element
+        st.write("Debug: Model output was a tuple, extracted first element")
     else:
         embedding = output
 
-    # Ensure embedding is 2D
+    # Ensure embedding is a tensor
+    if not isinstance(embedding, torch.Tensor):
+        st.error(f"Model output is not a tensor: {type(embedding)}")
+        st.stop()
+
+    # Ensure embedding is 2D (expected shape: [1, embedding_dim])
     if embedding.dim() == 1:
         embedding = embedding.unsqueeze(0)
-
-    # Ensure database is 2D
-    if database.dim() > 2:
-        database = database.squeeze(0)
+        st.write("Debug: Adjusted embedding from 1D to 2D")
+    elif embedding.dim() != 2:
+        st.error(f"Embedding tensor must be 2D, but has shape {embedding.shape}")
+        st.stop()
 
     # Compute cosine similarity
     try:
