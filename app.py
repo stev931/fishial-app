@@ -81,7 +81,13 @@ if uploaded_file is not None:
 
     # Run classification model to get embedding
     with torch.no_grad():
-        embedding = classification_model(image_cls)
+        output = classification_model(image_cls)
+
+    # Handle model output (tuple or tensor)
+    if isinstance(output, tuple):
+        embedding = output[0]  # Extract the first element (assuming it's the embedding)
+    else:
+        embedding = output
 
     # Ensure embedding is 2D
     if embedding.dim() == 1:
