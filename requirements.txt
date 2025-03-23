@@ -1,9 +1,9 @@
-streamlit
+streamlit==1.38.0
 torch==2.3.1
 torchvision==0.18.1
-numpy>=1.19.2
-opencv-python
-Pillow>=8.4.0
-pycocotools>=2.0.2
-Shapely
-pyyaml==5.1
+opencv-python-headless==4.10.0.84
+numpy==1.26.4
+Pillow==10.4.0
+pycocotools==2.0.8
+Shapely==2.0.6
+pyyaml==6.0.2
